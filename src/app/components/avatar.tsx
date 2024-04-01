@@ -1,6 +1,7 @@
 import {ReactElement} from "react";
 import {BubbleUserType} from "@/app/lib/types/bubble.type";
 
+
 export default function Avatar(user: BubbleUserType): ReactElement {
     if (user.name === 'ConsultApp') {
         return (
