@@ -1,6 +1,6 @@
 'use client';
 
-import {Dispatch, ReactElement, SetStateAction, useCallback, useEffect, useState} from "react";
+import {ReactElement, useCallback, useEffect, useState} from "react";
 import Sidebar from "@/app/components/sidebar";
 import Search from "@/app/components/search";
 import Timeline from "@/app/components/timeline";
@@ -10,7 +10,6 @@ import {Chat, TimelineType} from "@/app/lib/types/timeline.type";
 import {v4 as uuidv4} from 'uuid';
 import {useCookies} from "react-cookie";
 import {get, isEmpty} from "lodash";
-
 
 export default function Home(): ReactElement {
     const [cookies, setCookie] = useCookies(['uid']);
