@@ -13,7 +13,7 @@ export async function PUT(request: Request, {params}: { params: { id: string } }
     const payload = await request.json()
 
     const createChatRes = await fetch(`${CORE_API}${API_CHAT_PATH}${params.id}`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `${authorization}`,
@@ -22,8 +22,8 @@ export async function PUT(request: Request, {params}: { params: { id: string } }
     })
 
     const createChatData = await createChatRes.json()
-    
+
     if (createChatData.error) return Response.json({error: createChatData.error}, {status: 500})
 
-    return Response.json({}, {status: 201})
+    return Response.json(createChatData, {status: 201})
 }
