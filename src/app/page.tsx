@@ -19,27 +19,93 @@ export default function Home(): ReactElement {
     const [isTimelineLoading, setIsTimelineLoading] = useState(false);
     const [searchSent, setSearchSent] = useState(false);
 
+    const sendLoginUser = async (payload: any): Promise<any> => {
+        const response = await fetch('/api/login', {method: 'POST', body: payload})
+        return await response.json()
+    }
+
+    const sendSignupUser = async (payload: any): Promise<any> => {
+        const response = await fetch('/api/signup', {method: 'POST', body: payload})
+        return await response.json()
+    }
+
+    const getCurrentTimeline = async (accessToken: string) => {
+        const fetchOpts = {
+            method: 'GET',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+            },
+        }
+
+        const response = await fetch('/api/chats', fetchOpts)
+        return await response.json()
+    }
+
+    const createBaseChat = async (accessToken: string) => {
+        const payload = JSON.stringify({
+            timeline: [{
+                id: uuidv4(),
+                user: {
+                    id: 1,
+                    name: 'ConsultApp',
+                    avatar: 'https://ui-avatars.com/api/?name=Consult+App'
+                },
+                title: 'ConsultApp',
+                content: " <h2 className=\"font-medium text-gray-800 dark:text-white\"> How can we help? </h2> <div className=\"space-y-1.5\"> <p className=\"mb-1.5 text-sm text-gray-800 dark:text-white\"> You can ask questions like: </p> <ul className=\"list-disc list-outside space-y-1.5 ps-3.5\"> <li className=\"text-sm text-gray-800 dark:text-white\"> How can I get a VISA as a Colombian national? </li> <li className=\"text-sm text-gray-800 dark:text-white\"> Steps to get a visitor VISA to Canada as a Colombian? </li> <li className=\"text-sm text-gray-800 dark:text-white\"> Is it hard to get a VISA as a Colombian national for Canada? </li> </ul> </div>",
+                timestamp: new Date().toISOString(),
+                type: 'text',
+                status: 'received'
+            }]
+        })
+
+        const fetchOpts = {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+            },
+            body: payload
+        }
+
+        const timelineResponse = await fetch('/api/chats', fetchOpts)
+        return await timelineResponse.json()
+    }
+
+    const getTimelineData = useCallback(async () => {
+        const {accessToken} = currentUser
+
+        if (!accessToken) return
+
+        let timeline = await getCurrentTimeline(accessToken)
+
+        setIsTimelineLoading(true)
+
+        let currentChat = get(timeline, 'chats[0]', {}) as Chat
+
+        if (isEmpty(currentChat)) {
+            await createBaseChat(accessToken)
+            timeline = await getCurrentTimeline(accessToken)
+
+            currentChat = get(timeline, 'chats[0]', {}) as Chat
+        }
+
+        setTimeline(timeline)
+        setCurrentChat(currentChat)
+        setIsTimelineLoading(false)
+    }, [currentUser])
+
     const loginUser = useCallback(async () => {
+        if (!cookies.uid) return
+
         const payload = JSON.stringify({email: cookies.uid})
 
-        const sendLoginUser = async (): Promise<any> => {
-            const response = await fetch('/api/login', {method: 'POST', body: payload})
-            return await response.json()
-        }
-
-        const sendSignupUser = async (): Promise<any> => {
-            await fetch('/api/signup', {
-                method: 'POST',
-                body: payload
-            })
-        }
-
-        let loginUserResponse = await sendLoginUser()
+        let loginUserResponse = await sendLoginUser(payload)
 
         if (loginUserResponse.error === "Invalid credentials") {
-            await sendSignupUser()
+            await sendSignupUser(payload)
             await new Promise(resolve => setTimeout(resolve, 1000))
-            loginUserResponse = await sendLoginUser()
+            loginUserResponse = await sendLoginUser(payload)
         }
 
         const {accessToken, refreshToken} = loginUserResponse
@@ -52,92 +118,30 @@ export default function Home(): ReactElement {
         }
     }, [cookies.uid])
 
-    const fetchTimeline = useCallback(async () => {
-        const {accessToken} = currentUser
-
-        const getCurrentTimeline = async (accessToken: string) => {
-            const fetchOpts = {
-                method: 'GET',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`
-                },
-            }
-
-            const timelineResponse = await fetch(`${process.env.NEXT_PUBLIC_CORE_API}/api/chat/`, fetchOpts)
-            return await timelineResponse.json()
-        }
-
-        const createNewChat = async (accessToken: string) => {
-            const payload = JSON.stringify({
-                timeline: [{
-                    id: uuidv4(),
-                    user: {
-                        id: 1,
-                        name: 'ConsultApp',
-                        avatar: 'https://ui-avatars.com/api/?name=Consult+App'
-                    },
-                    title: 'ConsultApp',
-                    content: " <h2 className=\"font-medium text-gray-800 dark:text-white\"> How can we help? </h2> <div className=\"space-y-1.5\"> <p className=\"mb-1.5 text-sm text-gray-800 dark:text-white\"> You can ask questions like: </p> <ul className=\"list-disc list-outside space-y-1.5 ps-3.5\"> <li className=\"text-sm text-gray-800 dark:text-white\"> How can I get a VISA as a Colombian national? </li> <li className=\"text-sm text-gray-800 dark:text-white\"> Steps to get a visitor VISA to Canada as a Colombian? </li> <li className=\"text-sm text-gray-800 dark:text-white\"> Is it hard to get a VISA as a Colombian national for Canada? </li> </ul> </div>",
-                    timestamp: new Date().toISOString(),
-                    type: 'text',
-                    status: 'received'
-                }]
-            })
-
-            const fetchOpts = {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`
-                },
-                body: payload
-            }
-
-            const timelineResponse = await fetch(`${process.env.NEXT_PUBLIC_CORE_API}/api/chat/`, fetchOpts)
-            return await timelineResponse.json()
-        }
-
-        if (accessToken) {
-            let timeline = await getCurrentTimeline(accessToken)
-            setIsTimelineLoading(true)
-            let currentChat = get(timeline, 'chats[0]', {}) as Chat
-
-            if (isEmpty(currentChat)) {
-                await createNewChat(accessToken)
-                timeline = await getCurrentTimeline(accessToken)
-                currentChat = get(timeline, 'chats[0]', {}) as Chat
-            }
-
-            setTimeline(timeline)
-            setCurrentChat(currentChat)
-            setIsTimelineLoading(false)
-        }
-    }, [currentUser.accessToken])
-
     useEffect(() => {
-        if (!cookies.uid) {
-            const newUID = `${uuidv4()}@consultapp.com`
-            setCookie('uid', newUID, {path: '/', maxAge: 60 * 60 * 24 * 7})
+        if (!currentUser.accessToken) {
+            const inferredUID = cookies.uid || `${uuidv4()}@consultapp.com`
+            setCookie('uid', inferredUID, {path: '/', maxAge: 60 * 60 * 24 * 7})
+            loginUser()
+        } else {
+            getTimelineData()
         }
-        loginUser().then(() => {
-            fetchTimeline()
-        })
-    }, [loginUser, fetchTimeline, cookies.uid, setCookie]);
+    }, [cookies.uid, currentUser.accessToken, setCookie, loginUser, getTimelineData])
+
+    const providerCtx = {
+        timeline,
+        setTimeline,
+        currentChat,
+        setCurrentChat,
+        isTimelineLoading,
+        setIsTimelineLoading,
+        searchSent,
+        setSearchSent
+    }
 
     return (
         <CurrentUserContext.Provider value={{currentUser, setCurrentUser}}>
-            <ChatContext.Provider
-                value={{
-                    timeline,
-                    setTimeline,
-                    currentChat,
-                    setCurrentChat,
-                    isTimelineLoading,
-                    setIsTimelineLoading,
-                    searchSent,
-                    setSearchSent
-                }}>
+            <ChatContext.Provider value={providerCtx}>
                 <Sidebar/>
                 <div className="relative h-screen w-full lg:ps-64">
                     <div className="py-10 lg:py-14">

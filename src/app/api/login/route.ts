@@ -15,8 +15,10 @@ export async function POST(request: Request): Promise<Response> {
 
     const loginData = await loginRes.json()
 
-    if (!loginData.code) return Response.json({error: 'Invalid credentials'}, {status: 401})
-    
+    if (loginData.error === 'email not registered') return Response.json({error: 'Invalid credentials'}, {status: 404})
+
+    if (!loginData.code) return Response.json({error: loginData.error}, {status: 500})
+
     const accessDataRes = await fetch(`${CORE_API}${AUTH_TOKEN_PATH}`, {
         method: 'POST',
         headers: {
@@ -27,10 +29,10 @@ export async function POST(request: Request): Promise<Response> {
 
     const accessData = await accessDataRes.json()
 
-    if (!accessData.access_token) return Response.json({error: 'Error retrieving credentials'}, {status: 500})
+    if (!accessData.access_token) return Response.json(loginData, {status: 500})
 
     return Response.json({
         accessToken: accessData.access_token,
         refreshToken: accessData.refresh_token,
-    })
+    }, {status: 201})
 }

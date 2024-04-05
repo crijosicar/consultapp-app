@@ -25,16 +25,15 @@ export default function Timeline(): ReactElement {
             {map(timeline, (bubble: BubbleType, index) => {
                 const isLastElement = index === timeline!.length - 1;
                 return <li className="py-2 sm:py-4" ref={isLastElement ? endOfTimelineRef : null}>
-                    <Bubble key={uuidv4()} {...bubble}/>
+                    <Bubble key={bubble.id} {...bubble}/>
                 </li>
             })}
-            {(searchSent && isTimelineLoading) && <li className="py-2 sm:py-4">
-                <li className="py-2 sm:py-4">
+            {(searchSent && isTimelineLoading) &&
+                <li className="py-2 sm:py-4" key={uuidv4()}>
                     <div className="max-w-4xl px-4 sm:px-6 lg:px-8 mx-auto">
                         <ChatLoading/>
                     </div>
-                </li>
-            </li>}
+                </li>}
         </ul>
     )
 }

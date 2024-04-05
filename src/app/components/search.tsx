@@ -13,7 +13,6 @@ type SearchInput = {
     question: string
 }
 
-
 export default function Search(): ReactElement {
     const {currentUser} = useContext(CurrentUserContext);
     const {
@@ -62,7 +61,7 @@ export default function Search(): ReactElement {
         }
         setSearchSent(true)
         setIsTimelineLoading(true)
-        const postTimelineResponse = await fetch(`${process.env.NEXT_PUBLIC_CORE_API}/api/chat/${currentChat.id}`, fetchOpts)
+        const postTimelineResponse = await fetch(`/api/chats/${currentChat.id}`, fetchOpts)
         const postedNewTL = await postTimelineResponse.json()
 
         setCurrentChat(postedNewTL)
