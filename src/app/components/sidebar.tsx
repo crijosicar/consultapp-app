@@ -27,8 +27,9 @@ export default function Sidebar(): ReactElement {
             setTimeline(timeline)
             setCurrentChat(currentChat)
             setIsTimelineLoading(false)
+            router.push('/')
         }
-    }, [currentUser.accessToken])
+    }, [currentUser.accessToken, router])
 
     return (
         <div id="application-sidebar"
