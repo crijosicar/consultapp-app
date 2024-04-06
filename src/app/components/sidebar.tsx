@@ -2,13 +2,15 @@
 
 import Logo from "@/app/components/logo";
 import {ReactElement, useCallback, useContext} from "react";
-import {v4 as uuidv4} from "uuid";
 import {get} from "lodash";
 import {Chat} from "@/app/lib/types/timeline.type";
 import {ChatContext} from "@/app/lib/chatContext";
 import {CurrentUserContext} from "@/app/lib/currentUserContext";
+import {createBaseChat, getCurrentTimeline} from "@/app/services/chats";
+import {useRouter} from 'next/navigation'
 
 export default function Sidebar(): ReactElement {
+    const router = useRouter()
     const {setCurrentChat, setIsTimelineLoading, setTimeline} = useContext(ChatContext);
     const {currentUser} = useContext(CurrentUserContext);
 
@@ -16,52 +18,9 @@ export default function Sidebar(): ReactElement {
         setCurrentChat({} as Chat)
         setIsTimelineLoading(false)
 
-        const getCurrentTimeline = async (accessToken: string) => {
-            const fetchOpts = {
-                method: 'GET',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`
-                },
-            }
-
-            const timelineResponse = await fetch(`${process.env.NEXT_PUBLIC_CORE_API}/api/chat/`, fetchOpts)
-            return await timelineResponse.json()
-        }
-
-        const createNewChat = async (accessToken: string) => {
-            const payload = JSON.stringify({
-                timeline: [{
-                    id: uuidv4(),
-                    user: {
-                        id: 1,
-                        name: 'ConsultApp',
-                        avatar: 'https://ui-avatars.com/api/?name=Consult+App'
-                    },
-                    title: 'ConsultApp',
-                    content: " <h2 className=\"font-medium text-gray-800 dark:text-white\"> How can we help? </h2> <div className=\"space-y-1.5\"> <p className=\"mb-1.5 text-sm text-gray-800 dark:text-white\"> You can ask questions like: </p> <ul className=\"list-disc list-outside space-y-1.5 ps-3.5\"> <li className=\"text-sm text-gray-800 dark:text-white\"> How can I get a VISA as a Colombian national? </li> <li className=\"text-sm text-gray-800 dark:text-white\"> Steps to get a visitor VISA to Canada as a Colombian? </li> <li className=\"text-sm text-gray-800 dark:text-white\"> Is it hard to get a VISA as a Colombian national for Canada? </li> </ul> </div>",
-                    timestamp: new Date().toISOString(),
-                    type: 'text',
-                    status: 'received'
-                }]
-            })
-
-            const fetchOpts = {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`
-                },
-                body: payload
-            }
-
-            const timelineResponse = await fetch(`${process.env.NEXT_PUBLIC_CORE_API}/api/chat/`, fetchOpts)
-            return await timelineResponse.json()
-        }
-
         if (currentUser.accessToken) {
             setIsTimelineLoading(true)
-            await createNewChat(currentUser.accessToken)
+            await createBaseChat(currentUser.accessToken)
             const timeline = await getCurrentTimeline(currentUser.accessToken)
             const currentChat = get(timeline, 'chats[0]', {}) as Chat
 
@@ -105,6 +64,30 @@ export default function Sidebar(): ReactElement {
                                     <path d="M12 5v14"/>
                                 </svg>
                                 New chat
+                            </button>
+                        </li>
+                        <li className={'w-auto flex items-center'}>
+                            <button
+                                className="flex items-center gap-x-3 py-2 px-3 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                                onClick={() => {
+                                    router.push(`/chats`)
+                                }}>
+                                <svg
+                                    className="w-auto flex-shrink-0 size-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width={24}
+                                    height={24}
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M5 12h14"/>
+                                    <path d="M12 5v14"/>
+                                </svg>
+                                History
                             </button>
                         </li>
                     </ul>

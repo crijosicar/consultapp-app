@@ -3,12 +3,19 @@ import {headers} from 'next/headers'
 const API_CHAT_PATH = '/api/chat/'
 const {CORE_API} = process.env
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
     const authorization = headers().get('authorization')
+    const {searchParams} = new URL(request.url)
 
     if (!authorization) return Response.json({error: 'Unauthorized'}, {status: 401})
 
-    const chatRes = await fetch(`${CORE_API}${API_CHAT_PATH}`, {
+    let requestUrl = `${CORE_API}${API_CHAT_PATH}`
+
+    if (searchParams) {
+        requestUrl = `${requestUrl}?${searchParams}`
+    }
+
+    const chatRes = await fetch(requestUrl, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

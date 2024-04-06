@@ -1,6 +1,6 @@
 'use client';
 
-import {ReactElement, useContext, useEffect} from "react";
+import {ReactElement, useContext} from "react";
 import {SubmitHandler, useForm} from "react-hook-form";
 import {CurrentUserContext} from "@/app/lib/currentUserContext";
 import {ChatContext} from "@/app/lib/chatContext";
@@ -8,6 +8,7 @@ import useAuthUser from "@/app/lib/useAuthUser";
 import {v4 as uuidv4} from 'uuid';
 import {get} from "lodash";
 import {Timeline} from "@/app/lib/types/timeline.type";
+import {updateChatTimeline} from "@/app/services/chats";
 
 type SearchInput = {
     question: string
@@ -30,7 +31,7 @@ export default function Search(): ReactElement {
     } = useForm<SearchInput>()
 
     const onSubmit: SubmitHandler<SearchInput> = async (data) => {
-        if (!currentUser) return
+        if (!currentUser.accessToken) return
 
         const mixedTimeline = [
             ...get(currentChat, 'timeline', []),
@@ -49,20 +50,10 @@ export default function Search(): ReactElement {
             }
         ] as Timeline
 
-        const fetchOpts = {
-            method: 'PUT',
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${currentUser.accessToken}`
-            },
-            body: JSON.stringify({
-                timeline: mixedTimeline
-            })
-        }
         setSearchSent(true)
         setIsTimelineLoading(true)
-        const postTimelineResponse = await fetch(`/api/chats/${currentChat.id}`, fetchOpts)
-        const postedNewTL = await postTimelineResponse.json()
+
+        const postedNewTL = await updateChatTimeline(currentUser.accessToken, currentChat.id, mixedTimeline)
 
         setCurrentChat(postedNewTL)
         setIsTimelineLoading(false)
@@ -102,9 +93,7 @@ export default function Search(): ReactElement {
                 <div className="relative">
                     <textarea
                         {...register("question", {required: "This field is required", minLength: 3})}
-                        className={
-                            `p-4 pb-12 block w-full bg-gray-100 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-800 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600`
-                        }
+                        className={'p-4 pb-12 block w-full bg-gray-100 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-800 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600'}
                         placeholder="Ask me anything..."
                         defaultValue={""}
                     />

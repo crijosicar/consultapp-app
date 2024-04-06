@@ -21,11 +21,11 @@ export default function Timeline(): ReactElement {
     }, [timeline, isTimelineLoading, searchSent]);
 
     return (
-        <ul className="mt-16 space-y-5">
+        <ul className="m-40 space-y-5">
             {map(timeline, (bubble: BubbleType, index) => {
                 const isLastElement = index === timeline!.length - 1;
-                return <li className="py-2 sm:py-4" ref={isLastElement ? endOfTimelineRef : null}>
-                    <Bubble key={bubble.id} {...bubble}/>
+                return <li key={bubble.id} className="py-2 sm:py-4" ref={isLastElement ? endOfTimelineRef : null}>
+                    <Bubble {...bubble}/>
                 </li>
             })}
             {(searchSent && isTimelineLoading) &&
