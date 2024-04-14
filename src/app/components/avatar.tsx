@@ -6,7 +6,12 @@ import Image from "next/image";
 export default function Avatar(user: BubbleUserType): ReactElement {
     if (user.name === 'ConsultApp') {
         return (
-            <Image className="w-12 h-10" src={avatar} alt={'Avatar'}/>
+            <Image
+                className="w-12 h-10"
+                src={avatar}
+                alt={'Avatar'}
+                loading="eager"/>
+
         )
     }
 

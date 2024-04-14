@@ -92,7 +92,7 @@ export default function Search(): ReactElement {
             <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="relative">
                     <textarea
-                        {...register("question", {required: "This field is required", minLength: 3})}
+                        {...register("question", {required: "This field is required", minLength: 3, maxLength: 500})}
                         className={'p-4 pb-12 block w-full bg-gray-100 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-800 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600'}
                         placeholder="Ask me anything..."
                         defaultValue={""}

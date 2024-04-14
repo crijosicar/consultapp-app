@@ -1,10 +1,7 @@
 'use client';
 
 import {useCallback, useEffect, useState} from "react";
-import {QueryClient} from "@tanstack/query-core";
-import {QueryClientProvider} from "@tanstack/react-query";
 import Sidebar from "@/app/components/sidebar";
-import {useCookies} from "react-cookie";
 import {CurrentUser, CurrentUserContext} from "@/app/lib/currentUserContext";
 import {Chat, TimelineType} from "@/app/lib/types/timeline.type";
 import {createBaseChat, getCurrentTimeline} from "@/app/services/chats";
@@ -13,11 +10,17 @@ import {get, isEmpty} from "lodash";
 import {sendLoginUser, sendSignupUser} from "@/app/services/auth";
 import {v4 as uuidv4} from "uuid";
 import {ChatContext} from "./chatContext";
+import {jwtDecode, JwtPayload} from "jwt-decode";
+import {useLocalStorage} from "@uidotdev/usehooks";
+import {useCookies} from "next-client-cookies";
 
 export default function AppProvidersWrapper({children}: { children: React.ReactNode }) {
-    const [cookies, setCookie] = useCookies(['uid']);
-    const [currentUser, setCurrentUser] = useState<CurrentUser>({});
-    const [currentChat, setCurrentChat] = useState<Chat>({} as Chat);
+    const [currentChatLS, setCurrentChatLS] = useLocalStorage("currentChat", "");
+    const cookies = useCookies();
+    const [currentUser, setCurrentUser] = useState<CurrentUser>({} as CurrentUser);
+    const [currentChat, setCurrentChat] = useState<Chat>(() => {
+        return (!isEmpty(currentChatLS) ? JSON.parse(currentChatLS) : "{}") as Chat
+    })
     const [timeline, setTimeline] = useState({} as TimelineType);
     const [isTimelineLoading, setIsTimelineLoading] = useState(false);
     const [searchSent, setSearchSent] = useState(false);
@@ -48,13 +51,14 @@ export default function AppProvidersWrapper({children}: { children: React.ReactN
 
         setTimeline(timeline)
         setCurrentChat(currentChat)
+        setCurrentChatLS(JSON.stringify(currentChat))
         setIsTimelineLoading(false)
     }, [currentUser])
 
     const loginUser = useCallback(async () => {
-        if (!cookies.uid) return
+        if (!cookies.get('uid')) return
 
-        const payload = JSON.stringify({email: cookies.uid})
+        const payload = JSON.stringify({email: cookies.get('uid')})
 
         let loginUserResponse = await sendLoginUser(payload)
 
@@ -64,25 +68,63 @@ export default function AppProvidersWrapper({children}: { children: React.ReactN
             loginUserResponse = await sendLoginUser(payload)
         }
 
-        const {accessToken, refreshToken} = loginUserResponse
+        const {accessToken} = loginUserResponse
 
         if (accessToken) {
             setCurrentUser({
                 accessToken,
-                refreshToken
             })
+            cookies.set('accessToken', accessToken, {path: '/'})
         }
-    }, [cookies.uid])
+    }, [cookies])
+
+    const isValidToken = (token: string) => {
+        try {
+            const decodedToken = jwtDecode<JwtPayload>(token)
+            const currentTime = Date.now() / 1000
+
+            return decodedToken && decodedToken.exp && (decodedToken.exp > currentTime);
+        } catch (e) {
+            console.log(`Error decoding token: ${e}`)
+            return false
+        }
+
+    }
+
+    const getUserUid = () => cookies.get('uid') || `${uuidv4()}@consultapp.com`;
 
     useEffect(() => {
-        if (!currentUser.accessToken) {
-            const inferredUID = cookies.uid || `${uuidv4()}@consultapp.com`
-            setCookie('uid', inferredUID, {path: '/', maxAge: 60 * 60 * 24 * 7})
-            loginUser()
-        } else {
+        // const currentChatCookie = JSON.parse(cookies.get('currentChat') as string) as Chat
+        // console.log({currentChatCookie})
+        //
+        // if (!isEmpty(currentChatCookie)) {
+        //     setCurrentChat(currentChatCookie)
+        // }
+    }, [cookies]);
+
+    useEffect(() => {
+        const accessTokenCookie = cookies.get('accessToken');
+        const arefreshTokenCookie = cookies.get('refreshToken');
+
+        if (isEmpty(currentUser.accessToken) && !isEmpty(accessTokenCookie) && isValidToken(`${accessTokenCookie}`)) {
+            setCurrentUser({
+                accessToken: accessTokenCookie,
+                refreshToken: arefreshTokenCookie
+            })
             getTimelineData()
+        } else {
+            const isValidAccessToken = !isEmpty(currentUser.accessToken) && isValidToken(`${currentUser.accessToken}`)
+            const shouldAttemptLoginUser = isEmpty(currentUser.accessToken) || !isValidAccessToken
+
+            if (shouldAttemptLoginUser) {
+                const uid = getUserUid()
+                cookies.set('uid', uid, {path: '/'})
+                loginUser()
+            } else if (isEmpty(currentChat)) {
+                getTimelineData()
+            }
         }
-    }, [cookies.uid, currentUser.accessToken, setCookie, loginUser, getTimelineData])
+    }, [cookies, currentUser.accessToken, loginUser, getTimelineData])
 
     const providerCtx = {
         timeline,
@@ -95,25 +137,11 @@ export default function AppProvidersWrapper({children}: { children: React.ReactN
         setSearchSent
     }
 
-    const clientOpts = {
-        defaultOptions: {
-            queries: {
-                retry: false,
-                staleTime: 6 * 1000,
-                refetchInterval: 6 * 1000,
-            },
-        },
-    }
-
-    const [queryClient] = useState(() => new QueryClient(clientOpts));
-
     return (
         <CurrentUserContext.Provider value={{currentUser, setCurrentUser}}>
             <ChatContext.Provider value={providerCtx}>
                 <Sidebar/>
-                <QueryClientProvider client={queryClient}>
-                    {children}
-                </QueryClientProvider>
+                {children}
             </ChatContext.Provider>
         </CurrentUserContext.Provider>
     );

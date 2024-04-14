@@ -1,10 +1,10 @@
 import type {Metadata} from "next";
 import {Inter, Merriweather} from "next/font/google";
 import PrelineScript from "@/app/components/PrelineScript";
-import QueryClientProviderWrapper from "@/app/lib/appProviders";
 
 import "./globals.css";
 import AppProvidersWrapper from "@/app/lib/appProviders";
+import {CookiesProvider} from "next-client-cookies/server";
 
 const weather = Merriweather({
     weight: '400',
@@ -30,9 +30,11 @@ export default function RootLayout({children}: Readonly<{
     return (
         <html lang="en" className={`${weather.variable} ${inter.variable}`}>
         <body>
-        <AppProvidersWrapper>
-            <main>{children}</main>
-        </AppProvidersWrapper>
+        <CookiesProvider>
+            <AppProvidersWrapper>
+                <main>{children}</main>
+            </AppProvidersWrapper>
+        </CookiesProvider>
         </body>
         <PrelineScript/>
         </html>
